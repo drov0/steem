@@ -6,5 +6,25 @@
 #define STEEM_HARDFORK_0_22__3485 STEEM_HARDFORK_0_22
 
 #define STEEM_HARDFORK_0_22_VERSION hardfork_version( 0, 22 )
+#define STEEM_PROTECTION_HARDFORK_TIME 1582988400 // Sat, 29 February 2020 15:00:00 UTC (11:00:00 EDT)
+
+namespace hardforkprotect
+{
+
+inline static const std::set< std::string >& get_steemit_accounts()
+{
+   static const std::set< std::string > steemit_accounts
+   {
+    "misterdelegation",
+    "steem",
+    "steemit",
+    "steemit2",
+    "steemitadmin"
+   };
+
+   return steemit_accounts;
+}
+
+}
 
 #endif

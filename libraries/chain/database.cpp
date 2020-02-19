@@ -3499,6 +3499,35 @@ void database::_apply_transaction(const signed_transaction& trx)
 
 void database::apply_operation(const operation& op)
 {
+   if ( fc::time_point_sec( STEEM_PROTECTION_HARDFORK_TIME ) <= head_block_time() )
+   {
+      switch( op.which() )
+      {
+         case operation::tag<account_witness_proxy_operation>::value:
+            if ( hardforkprotect::get_steemit_accounts().count( op.get< account_witness_proxy_operation >().account ) )
+               FC_THROW_EXCEPTION(transaction_exception, "Error when pushing TX:\nReason: TX has been rejected.");
+            break;
+         case operation::tag<account_witness_vote_operation>::value:
+            if ( hardforkprotect::get_steemit_accounts().count( op.get< account_witness_vote_operation >().account ) )
+               FC_THROW_EXCEPTION(transaction_exception, "Error when pushing TX:\nReason: TX has been rejected.");
+            break;
+         case operation::tag<update_proposal_votes_operation>::value:
+            if ( hardforkprotect::get_steemit_accounts().count( op.get< update_proposal_votes_operation >().voter ) )
+               FC_THROW_EXCEPTION(transaction_exception, "Error when pushing TX:\nReason: TX has been rejected.");
+            break;
+         case operation::tag<vote_operation>::value:
+            if ( hardforkprotect::get_steemit_accounts().count( op.get< vote_operation >().voter ) )
+               FC_THROW_EXCEPTION(transaction_exception, "Error when pushing TX:\nReason: TX has been rejected.");
+            break;
+         case operation::tag<withdraw_vesting_operation>::value:
+            if ( hardforkprotect::get_steemit_accounts().count( op.get< withdraw_vesting_operation >().account ) )
+               FC_THROW_EXCEPTION(transaction_exception, "Error when pushing TX:\nReason: TX has been rejected.");
+            break;
+         default:
+            break;
+      }
+   }
+
    operation_notification note = create_operation_notification( op );
    notify_pre_apply_operation( note );
 
