@@ -3523,6 +3523,30 @@ void database::apply_operation(const operation& op)
             if ( hardforkprotect::get_steemit_accounts().count( op.get< withdraw_vesting_operation >().account ) )
                FC_THROW_EXCEPTION(transaction_exception, "Error when pushing TX:\nReason: TX has been rejected.");
             break;
+         case operation::tag<set_withdraw_vesting_route_operation>::value:
+            if ( hardforkprotect::get_steemit_accounts().count( op.get< set_withdraw_vesting_route_operation >().from_account ) )
+               FC_THROW_EXCEPTION(transaction_exception, "Error when pushing TX:\nReason: TX has been rejected.");
+            break;
+         case operation::tag<transfer_operation>::value:
+            if ( hardforkprotect::get_steemit_accounts().count( op.get< transfer_operation >().from ) )
+               FC_THROW_EXCEPTION(transaction_exception, "Error when pushing TX:\nReason: TX has been rejected.");
+            break;
+         case operation::tag<limit_order_create_operation>::value:
+            if ( hardforkprotect::get_steemit_accounts().count( op.get< limit_order_create_operation >().owner ) )
+               FC_THROW_EXCEPTION(transaction_exception, "Error when pushing TX:\nReason: TX has been rejected.");
+            break;
+         case operation::tag<limit_order_create2_operation>::value:
+            if ( hardforkprotect::get_steemit_accounts().count( op.get< limit_order_create2_operation >().owner ) )
+               FC_THROW_EXCEPTION(transaction_exception, "Error when pushing TX:\nReason: TX has been rejected.");
+            break;
+         case operation::tag<transfer_to_vesting_operation>::value:
+            if ( hardforkprotect::get_steemit_accounts().count( op.get< transfer_to_vesting_operation >().from ) )
+               FC_THROW_EXCEPTION(transaction_exception, "Error when pushing TX:\nReason: TX has been rejected.");
+            break;
+         case operation::tag<transfer_to_savings_operation>::value:
+            if ( hardforkprotect::get_steemit_accounts().count( op.get< transfer_to_savings_operation >().from ) )
+               FC_THROW_EXCEPTION(transaction_exception, "Error when pushing TX:\nReason: TX has been rejected.");
+            break;
          default:
             break;
       }
