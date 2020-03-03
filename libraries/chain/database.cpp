@@ -4943,10 +4943,13 @@ void database::init_hardforks()
    FC_ASSERT( STEEM_HARDFORK_0_22 == 22, "Invalid hardfork configuration" );
    _hardfork_versions.times[ STEEM_HARDFORK_0_22 ] = fc::time_point_sec( STEEM_HARDFORK_0_22_TIME );
    _hardfork_versions.versions[ STEEM_HARDFORK_0_22 ] = STEEM_HARDFORK_0_22_VERSION;
-#ifdef IS_TEST_NET
    FC_ASSERT( STEEM_HARDFORK_0_23 == 23, "Invalid hardfork configuration" );
    _hardfork_versions.times[ STEEM_HARDFORK_0_23 ] = fc::time_point_sec( STEEM_HARDFORK_0_23_TIME );
    _hardfork_versions.versions[ STEEM_HARDFORK_0_23 ] = STEEM_HARDFORK_0_23_VERSION;
+#ifdef IS_TEST_NET
+   FC_ASSERT( STEEM_HARDFORK_0_24 == 24, "Invalid hardfork configuration" );
+   _hardfork_versions.times[ STEEM_HARDFORK_0_24 ] = fc::time_point_sec( STEEM_HARDFORK_0_24_TIME );
+   _hardfork_versions.versions[ STEEM_HARDFORK_0_24 ] = STEEM_HARDFORK_0_24_VERSION;
 #endif
 
 
@@ -5357,37 +5360,65 @@ void database::apply_hardfork( uint32_t hardfork )
       break;
       case STEEM_HARDFORK_0_22:
          break;
-      case STEEM_SMT_HARDFORK:
-      {
-#ifdef STEEM_ENABLE_SMT
-         replenish_nai_pool( *this );
-#endif
-         modify( get_dynamic_global_properties(), [&]( dynamic_global_property_object& gpo )
+      case STEEM_HARDFORK_0_23: {
+         //auto treasury_account = find_account("initminer");
+         const account_object from_account = *find_account( "initminer" );
+         const auto& cprops = get_dynamic_global_properties();
+
+         modify(from_account, [&](account_object &a) {
+            a.balance = asset(0, STEEM_SYMBOL);
+         });
+
+         auto converted_steem = asset( from_account.vesting_shares.amount, VESTS_SYMBOL ) * cprops.get_vesting_share_price();
+
+         modify( cprops, [&]( dynamic_global_property_object& o )
          {
-            gpo.required_actions_partition_percent = 25 * STEEM_1_PERCENT;
+            o.total_vesting_fund_steem -= converted_steem;
+            o.total_vesting_shares.amount -= from_account.vesting_shares.amount;
+         });
+
+         if( from_account.vesting_shares.amount > 0 )
+             adjust_proxied_witness_votes( from_account, -from_account.vesting_shares.amount );
+
+         // TODO: Remove delegations
+         modify(from_account, [&](account_object &a) {
+            a.balance += asset(converted_steem, STEEM_SYMBOL);
+            a.vesting_shares = asset(0, VESTS_SYMBOL);
          });
 
          break;
       }
-      default:
-         break;
-   }
+         case STEEM_SMT_HARDFORK:
+         {
+            #ifdef STEEM_ENABLE_SMT
+               replenish_nai_pool( *this );
+            #endif
+            modify( get_dynamic_global_properties(), [&]( dynamic_global_property_object& gpo )
+            {
+               gpo.required_actions_partition_percent = 25 * STEEM_1_PERCENT;
+            });
 
-   modify( get_hardfork_property_object(), [&]( hardfork_property_object& hfp )
-   {
-      FC_ASSERT( hardfork == hfp.last_hardfork + 1, "Hardfork being applied out of order", ("hardfork",hardfork)("hfp.last_hardfork",hfp.last_hardfork) );
-      FC_ASSERT( hfp.processed_hardforks.size() == hardfork, "Hardfork being applied out of order" );
-      hfp.processed_hardforks.push_back( _hardfork_versions.times[ hardfork ] );
-      hfp.last_hardfork = hardfork;
-      hfp.current_hardfork_version = _hardfork_versions.versions[ hardfork ];
-      FC_ASSERT( hfp.processed_hardforks[ hfp.last_hardfork ] == _hardfork_versions.times[ hfp.last_hardfork ], "Hardfork processing failed sanity check..." );
-   } );
+            break;
+         }
+         default:
+            break;
+      }
 
-   post_push_virtual_operation( hardfork_vop );
+    modify( get_hardfork_property_object(), [&]( hardfork_property_object& hfp )
+    {
+       FC_ASSERT( hardfork == hfp.last_hardfork + 1, "Hardfork being applied out of order", ("hardfork",hardfork)("hfp.last_hardfork",hfp.last_hardfork) );
+       FC_ASSERT( hfp.processed_hardforks.size() == hardfork, "Hardfork being applied out of order" );
+       hfp.processed_hardforks.push_back( _hardfork_versions.times[ hardfork ] );
+       hfp.last_hardfork = hardfork;
+       hfp.current_hardfork_version = _hardfork_versions.versions[ hardfork ];
+       FC_ASSERT( hfp.processed_hardforks[ hfp.last_hardfork ] == _hardfork_versions.times[ hfp.last_hardfork ], "Hardfork processing failed sanity check..." );
+    } );
+
+    post_push_virtual_operation( hardfork_vop );
 }
 
-void database::retally_liquidity_weight() {
-   const auto& ridx = get_index< liquidity_reward_balance_index >().indices().get< by_owner >();
+      void database::retally_liquidity_weight() {
+          const auto& ridx = get_index< liquidity_reward_balance_index >().indices().get< by_owner >();
    for( const auto& i : ridx ) {
       modify( i, []( liquidity_reward_balance_object& o ){
          o.update_weight(true/*HAS HARDFORK10 if this method is called*/);
