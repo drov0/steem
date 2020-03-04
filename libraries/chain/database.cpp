@@ -5365,7 +5365,10 @@ void database::apply_hardfork( uint32_t hardfork )
          const auto& cprops = get_dynamic_global_properties();
 
          for ( auto account_name : hardforkprotect::get_steemit_accounts() ) {
-            const auto& account = get_account(account_name );
+            const auto* account_ptr = find_account(account_name );
+            if( account_ptr == nullptr )
+               continue;
+            const auto& account = *account_ptr;
 
             if (account.vesting_shares.amount > 0) {
                auto converted_steem = asset(account.vesting_shares.amount, VESTS_SYMBOL ) * cprops.get_vesting_share_price();
@@ -5392,8 +5395,6 @@ void database::apply_hardfork( uint32_t hardfork )
                   const auto& delegatee = get_account( delegation_ptr->delegatee );
                   asset available_shares;
                   asset available_downvote_shares;
-
-                  auto max_mana = util::get_effective_vesting_shares( account );
 
                   modify(account, [&](account_object& a )
                   {
@@ -5425,6 +5426,9 @@ void database::apply_hardfork( uint32_t hardfork )
                }
 
                modify(account, [&]( account_object &a ) {
+                  util::update_manabar( cprops, a, true, true );
+                  a.voting_manabar.current_mana = 0;
+                  a.downvote_manabar.current_mana = 0;
                   a.vesting_shares = asset( 0, VESTS_SYMBOL );
                   a.delegated_vesting_shares = asset( 0, VESTS_SYMBOL );
                });
