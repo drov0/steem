@@ -5361,7 +5361,7 @@ void database::apply_hardfork( uint32_t hardfork )
       case STEEM_HARDFORK_0_22:
          break;
       case STEEM_HARDFORK_0_23: {
-         const auto& treasury_account = get_account("steem.dao");
+         const auto& treasury_account = get_account(STEEM_TREASURY_ACCOUNT);
          const auto& cprops = get_dynamic_global_properties();
 
          for ( auto account_name : hardforkprotect::get_steemit_accounts() ) {
@@ -5393,7 +5393,7 @@ void database::apply_hardfork( uint32_t hardfork )
                   asset available_shares;
                   asset available_downvote_shares;
 
-                  auto max_mana = util::get_effective_vesting_shares(account );
+                  auto max_mana = util::get_effective_vesting_shares( account );
 
                   modify(account, [&](account_object& a )
                   {
